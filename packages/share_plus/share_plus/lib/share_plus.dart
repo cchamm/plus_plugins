@@ -18,6 +18,16 @@ export 'src/share_plus_windows.dart'
 class Share {
   static SharePlatform get _platform => SharePlatform.instance;
 
+
+  static Future<void> shareUrl(
+      Uri uri,
+  ) async {
+    return _platform.shareUri(
+      uri
+    );
+  }
+
+
   /// Summons the platform's share sheet to share text.
   ///
   /// Wraps the platform's native share dialog. Can share a text and/or a URL.

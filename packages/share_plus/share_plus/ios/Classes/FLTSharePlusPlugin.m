@@ -1,7 +1,6 @@
 // Copyright 2019 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #import "FLTSharePlusPlugin.h"
 #import "LinkPresentation/LPLinkMetadata.h"
 #import "LinkPresentation/LPMetadataProvider.h"
@@ -88,6 +87,9 @@ TopViewControllerForViewController(UIViewController *viewController) {
 @property(readonly, nonatomic, copy) NSString *text;
 @property(readonly, nonatomic, copy) NSString *path;
 @property(readonly, nonatomic, copy) NSString *mimeType;
+@property(readonly, nonatomic, copy) NSString *uri;
+
+- (instancetype)initWithUri:(NSString *) uri;
 
 - (instancetype)initWithSubject:(NSString *)subject
                            text:(NSString *)text NS_DESIGNATED_INITIALIZER;
@@ -109,6 +111,14 @@ TopViewControllerForViewController(UIViewController *viewController) {
 - (instancetype)init {
   [super doesNotRecognizeSelector:_cmd];
   return nil;
+}
+
+- (instancetype) initWithUri: (NSString *) uri {
+  self = [super init];
+  if (self) {
+    _uri = uri;
+  }
+  return self;
 }
 
 - (instancetype)initWithSubject:(NSString *)subject text:(NSString *)text {
@@ -150,6 +160,12 @@ TopViewControllerForViewController(UIViewController *viewController) {
 
 - (id)activityViewController:(UIActivityViewController *)activityViewController
          itemForActivityType:(UIActivityType)activityType {
+   // if _uri is not null, return an NSURL for the placeholder
+   NSLog(@"_uri: %@", _uri);
+   if (_uri) {
+     NSURL *url = [NSURL URLWithString:_uri];
+     return url;
+   }
   if (!_path || !_mimeType) {
     return _text;
   }
@@ -162,6 +178,7 @@ TopViewControllerForViewController(UIViewController *viewController) {
     UIImage *image = [UIImage imageWithContentsOfFile:_path];
     return image;
   }
+
 
   // Return an NSURL for the real share to conserve the file name
   NSURL *url = [NSURL fileURLWithPath:_path];
@@ -199,7 +216,30 @@ TopViewControllerForViewController(UIViewController *viewController) {
     API_AVAILABLE(macos(10.15), ios(13.0), watchos(6.0)) {
   LPLinkMetadata *metadata = [[LPLinkMetadata alloc] init];
 
-  if ([_subject length] > 0) {
+  if ([_uri length] > 0) {
+    NSLog(@"activityViewControllerLinkMetadata _uri: %@", _uri);
+    metadata.title = _uri;
+    NSURL *url = [NSURL URLWithString:@"https://official.fat.rdezlink.tech/_next/static/media/verified-logo.42e4e40a.png"];
+    metadata.originalURL = url;
+    metadata.URL = metadata.originalURL;
+    // NSItemProvider *itemProvider = [[NSItemProvider alloc] initWithContentsOfURL:url];
+
+    // [itemProvider loadItemForTypeIdentifier:@"public.image"
+    //                                options:nil
+    //                      completionHandler:^(UIImage *item, NSError *error) {
+    //     if (error) {
+    //         NSLog(@"Error: %@", error.localizedDescription);
+    //     } else {
+    //         NSLog(@"Loaded image: %@", item);
+    //     }
+    // }];
+
+    NSData *data = [NSData dataWithContentsOfURL:url];
+    UIImage *image = [UIImage imageWithData:data];
+    NSItemProvider *itemProvider = [[NSItemProvider alloc] initWithObject:image];
+    metadata.imageProvider = itemProvider;
+    return metadata;
+  } else if ([_subject length] > 0) {
     metadata.title = _subject;
   } else if ([_text length] > 0) {
     metadata.title = _text;
@@ -334,6 +374,36 @@ TopViewControllerForViewController(UIViewController *viewController) {
                   withResult:withResult];
           if (!withResult)
             result(nil);
+        } else if ([@"shareUri" isEqualToString:call.method]) {
+          // log share uri
+          NSLog(@"ShareUri  abcccc");
+
+          NSString *uri = arguments[@"uri"];
+          NSLog(@"ShareUri  %@", uri);
+
+
+          if (uri.length == 0) {
+            result([FlutterError errorWithCode:@"error"
+                                       message:@"Non-empty uri expected"
+                                       details:nil]);
+            return;
+          }
+
+          UIViewController *rootViewController = RootViewController();
+          if (!rootViewController) {
+            result([FlutterError errorWithCode:@"error"
+                                       message:@"No root view controller found"
+                                       details:nil]);
+            return;
+          }
+          UIViewController *topViewController =
+              TopViewControllerForViewController(rootViewController);
+
+          [self shareUri:uri
+              withController:topViewController
+                    atSource:originRect
+                    toResult:result
+                  withResult:withResult];
         } else {
           result(FlutterMethodNotImplemented);
         }
@@ -396,6 +466,21 @@ TopViewControllerForViewController(UIViewController *viewController) {
   [controller presentViewController:activityViewController
                            animated:YES
                          completion:nil];
+}
+
++ (void)shareUri:(NSString *)uri
+    withController:(UIViewController *)controller
+          atSource:(CGRect)origin
+          toResult:(FlutterResult)result
+        withResult:(BOOL)withResult {
+  // NSObject *data = [[SharePlusData alloc] initWithUri:uri];
+  NSURL *data = [NSURL URLWithString:uri];
+  [self share:@[ data ]
+         withSubject:nil
+      withController:controller
+            atSource:origin
+            toResult:result
+          withResult:withResult];
 }
 
 + (void)shareText:(NSString *)shareText

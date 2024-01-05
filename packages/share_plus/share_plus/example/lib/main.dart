@@ -183,20 +183,22 @@ class DemoAppState extends State<DemoApp> {
     // has its position and size after it's built.
     final box = context.findRenderObject() as RenderBox?;
 
-    if (imagePaths.isNotEmpty) {
-      final files = <XFile>[];
-      for (var i = 0; i < imagePaths.length; i++) {
-        files.add(XFile(imagePaths[i], name: imageNames[i]));
-      }
-      await Share.shareXFiles(files,
-          text: text,
-          subject: subject,
-          sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size);
-    } else {
-      await Share.share(text,
-          subject: subject,
-          sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size);
-    }
+    await Share.shareUrl(Uri.parse('https://official.fat.rdezlink.tech/products/ezlink/profile/C8C49BAD735EED65C4B22D6880190391/'));
+
+    // if (imagePaths.isNotEmpty) {
+    //   final files = <XFile>[];
+    //   for (var i = 0; i < imagePaths.length; i++) {
+    //     files.add(XFile(imagePaths[i], name: imageNames[i]));
+    //   }
+    //   await Share.shareXFiles(files,
+    //       text: text,
+    //       subject: subject,
+    //       sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size);
+    // } else {
+    //   await Share.share(text,
+    //       subject: subject,
+    //       sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size);
+    // }
   }
 
   void _onShareWithResult(BuildContext context) async {
